@@ -1,6 +1,6 @@
 # Cube Radar 🛰️
 
-Cube Sandbox 全网传播监测工具（方案 A · MVP）。
+Cube Sandbox 应用/集成监测工具（方案 A · MVP）。
 
 零成本、本地运行、数据自有。覆盖 Hacker News / GitHub Issues&PR / GitHub Code Search / Reddit / Google News 五大数据源，输出精美的 HTML 报告。
 
