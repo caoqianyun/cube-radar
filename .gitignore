@@ -1,0 +1,19 @@
+# 敏感文件（绝对不能推到公开仓库）
+config.yaml          # 含真实 GitHub token
+data/                # SQLite 数据库 + 历史采集数据
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 系统
+.DS_Store
+*.log
+*.swp
+
+# 编辑器
+.vscode/
+.idea/

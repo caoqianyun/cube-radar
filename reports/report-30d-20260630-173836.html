@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cube Sandbox · Radar Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0A0E14;
+    --bg-card: #11161D;
+    --bg-card-hover: #161C24;
+    --border: #1F2630;
+    --text: #E6EDF3;
+    --text-muted: #7D8590;
+    --text-dim: #4B535D;
+    --brand: #3F7FC4;
+    --brand-light: #6BA7DC;
+    --accent: #27476F;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(63,127,196,0.08), transparent 50%),
+      radial-gradient(circle at 80% 100%, rgba(39,71,111,0.06), transparent 50%);
+  }
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .header h1 .brand {
+    color: var(--brand-light);
+  }
+  .header .sub {
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-size: 13px;
+  }
+  .window-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--brand-light);
+  }
+  .window-badge::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: var(--brand-light);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--brand-light);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* KPI cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    transition: all 0.2s;
+  }
+  .kpi-card:hover {
+    border-color: var(--brand);
+    transform: translateY(-2px);
+  }
+  .kpi-label {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-hint {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 6px;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 32px;
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .section-title .num {
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+
+  /* Chart card */
+  .chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .chart-wrap {
+    position: relative;
+    height: 320px;
+  }
+
+  /* 2-col layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 900px) {
+    .two-col { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-variant-numeric: tabular-nums; color: var(--text); }
+  td.muted { color: var(--text-dim); font-size: 12px; }
+  td a.ml { color: var(--text); text-decoration: none; }
+  td a.ml:hover { color: var(--brand-light); }
+  .empty { color: var(--text-dim); text-align: center; padding: 28px !important; font-style: italic; }
+
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* Progress bar */
+  .bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .bar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--brand);
+    min-width: 4px;
+  }
+  .bar-pct {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    min-width: 36px;
+  }
+
+  /* Top cards */
+  .top-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .top-card {
+    display: flex;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s;
+  }
+  .top-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--brand);
+    transform: translateX(4px);
+  }
+  .top-rank {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    min-width: 32px;
+    padding-top: 2px;
+  }
+  .top-body { flex: 1; min-width: 0; }
+  .top-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .top-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin: 4px 0 6px;
+  }
+  .top-stats {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .top-stats .score {
+    margin-left: auto;
+    color: var(--brand-light);
+    font-weight: 500;
+  }
+
+  /* Chip */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: color-mix(in srgb, var(--c) 18%, transparent);
+    color: var(--c);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .muted { color: var(--text-muted); }
+
+  /* Footer */
+  .footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+  }
+  .footer a { color: var(--brand-light); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1><span class="brand">●</span> Cube Sandbox <span style="color:var(--text-muted);font-weight:400">· Radar Report</span></h1>
+      <div class="sub">Period: 2026-05-31 09:38 UTC → 2026-06-30 09:38 UTC · Generated 2026-06-30 17:38</div>
+    </div>
+    <div class="window-badge">Window: 30d</div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Mentions</div>
+      <div class="kpi-value">36</div>
+      <div class="kpi-hint">Across HN / GitHub / Reddit / Google News</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Unique Authors</div>
+      <div class="kpi-value">19</div>
+      <div class="kpi-hint">Distinct accounts mentioning the project</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Engagement</div>
+      <div class="kpi-value">26</div>
+      <div class="kpi-hint">Upvotes + comments combined</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Peak Day</div>
+      <div class="kpi-value" style="font-size:20px">2026-06-29</div>
+      <div class="kpi-hint">9 mentions on this day</div>
+    </div>
+  </div>
+
+  <!-- Trend chart -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Volume Trend <span class="num">· daily mentions by source</span></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Source breakdown + pie -->
+  <div class="two-col">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Source Breakdown</div>
+      </div>
+      <div class="chart-card" style="padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Mentions</th>
+              <th>Points</th>
+              <th>Comments</th>
+              <th>Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+        <tr>
+          <td><span class="dot" style="background:#8B5CF6"></span>GitHub</td>
+          <td class="num">30</td>
+          <td class="num">1</td>
+          <td class="num">22</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar" style="width:83.3%;background:#8B5CF6"></div>
+              <span class="bar-pct">83.3%</span>
+            </div>
+          </td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="dot" style="background:#4285F4"></span>Google News</td>
+          <td class="num">3</td>
+          <td class="num">0</td>
+          <td class="num">0</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar" style="width:8.3%;background:#4285F4"></div>
+              <span class="bar-pct">8.3%</span>
+            </div>
+          </td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="dot" style="background:#FF6600"></span>Hacker News</td>
+          <td class="num">3</td>
+          <td class="num">2</td>
+          <td class="num">1</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar" style="width:8.3%;background:#FF6600"></div>
+              <span class="bar-pct">8.3%</span>
+            </div>
+          </td>
+        </tr>
+        
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Distribution</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-wrap" style="height:260px"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top mentions -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Top Mentions <span class="num">· ranked by engagement</span></div>
+    </div>
+    <div class="top-grid">
+      
+        <a class="top-card" href="https://github.com/hippozjs/hermes-agent/pull/1" target="_blank" rel="noopener">
+          <div class="top-rank">#1</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@hippozjs</span>
+              <span class="muted">· 8d ago</span>
+            </div>
+            <div class="top-title">CI: cube-sandbox-backend (mirror for upstream #47614)</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 10</span>
+              <span class="score">score 20</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/wwthw/CubeSandbox/pull/1" target="_blank" rel="noopener">
+          <div class="top-rank">#2</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@wwthw</span>
+              <span class="muted">· 5d ago</span>
+            </div>
+            <div class="top-title">CubeSandbox on Kubernetes, compute node image build and deploy.</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 3</span>
+              <span class="score">score 6</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://news.ycombinator.com/item?id=48680473" target="_blank" rel="noopener">
+          <div class="top-rank">#3</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#FF6600">Hacker News</span>
+              <span class="muted">@hblqzj</span>
+              <span class="muted">· 4d ago</span>
+            </div>
+            <div class="top-title">This isn't a PPT. Repo speaks</div>
+            <div class="top-stats">
+              <span>↑ 2</span>
+              <span>💬 1</span>
+              <span class="score">score 4</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/Atena-IT/open-arena/issues/33" target="_blank" rel="noopener">
+          <div class="top-rank">#4</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@DiTo97</span>
+              <span class="muted">· 6d ago</span>
+            </div>
+            <div class="top-title">Epic: Adopt Open Arena as Reply ModelFactory eval/RL arena (M1–M5)</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 2</span>
+              <span class="score">score 4</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/superset-sh/superset/issues/5047" target="_blank" rel="noopener">
+          <div class="top-rank">#5</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@patelchaitany</span>
+              <span class="muted">· 27d ago</span>
+            </div>
+            <div class="top-title">Explore CubeSandbox integration for running AI agents in isolated micro-VMs</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 2</span>
+              <span class="score">score 4</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/malmoos/malmo/pull/282" target="_blank" rel="noopener">
+          <div class="top-rank">#6</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@bogdanpydev</span>
+              <span class="muted">· 11h ago</span>
+            </div>
+            <div class="top-title">catalog: add Cube (#270)</div>
+            <div class="top-stats">
+              <span>↑ 1</span>
+              <span>💬 1</span>
+              <span class="score">score 3</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/RickMAllowIT/babomoba/issues/18" target="_blank" rel="noopener">
+          <div class="top-rank">#7</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@RickMAllowIT</span>
+              <span class="muted">· 22h ago</span>
+            </div>
+            <div class="top-title">Slice 15: Core</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/RickMAllowIT/babomoba/issues/4" target="_blank" rel="noopener">
+          <div class="top-rank">#8</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@RickMAllowIT</span>
+              <span class="muted">· 22h ago</span>
+            </div>
+            <div class="top-title">Slice 17: Enemy dummy (static)</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/RickMAllowIT/babomoba/issues/1" target="_blank" rel="noopener">
+          <div class="top-rank">#9</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@RickMAllowIT</span>
+              <span class="muted">· 22h ago</span>
+            </div>
+            <div class="top-title">PRD: Project BaboMOBA — MVP Phase 1 Sandbox</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/yxlyx/lawplain/issues/82" target="_blank" rel="noopener">
+          <div class="top-rank">#10</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@justrach</span>
+              <span class="muted">· 2d ago</span>
+            </div>
+            <div class="top-title">Ask Lawplain fails in production: sandboxed agent ends before producing an answer</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/markjeromecruz/craftmania/pull/46" target="_blank" rel="noopener">
+          <div class="top-rank">#11</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@markjeromecruz</span>
+              <span class="muted">· 10h ago</span>
+            </div>
+            <div class="top-title">Pet park off the town route, sell produce at the store, 2 more mini-games, brighter lamps, kids/pets play on every activity</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 0</span>
+              <span class="score">score 0</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/IPA-CyberLab/IPA-RS-KakuriZai/pull/2" target="_blank" rel="noopener">
+          <div class="top-rank">#12</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@mizuamedesu</span>
+              <span class="muted">· 23h ago</span>
+            </div>
+            <div class="top-title">[codex] Harden Studio authentication</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 0</span>
+              <span class="score">score 0</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/bianzhilong2-ctrl/agents-radar/issues/275" target="_blank" rel="noopener">
+          <div class="top-rank">#13</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· 1d ago</span>
+            </div>
+            <div class="top-title">🦞 OpenClaw Ecosystem Digest 2026-06-29</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 0</span>
+              <span class="score">score 0</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/Chestnuts-0/os-feed/issues/232" target="_blank" rel="noopener">
+          <div class="top-rank">#14</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· 1d ago</span>
+            </div>
+            <div class="top-title">🦞 OpenClaw Ecosystem Digest 2026-06-29</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 0</span>
+              <span class="score">score 0</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/Chestnuts-0/os-feed/issues/230" target="_blank" rel="noopener">
+          <div class="top-rank">#15</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· 1d ago</span>
+            </div>
+            <div class="top-title">🦞 OpenClaw 生态日报 2026-06-29</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 0</span>
+              <span class="score">score 0</span>
+            </div>
+          </div>
+        </a>
+        
+    </div>
+  </div>
+
+  <!-- All mentions table -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">All Mentions <span class="num">· latest 50</span></div>
+    </div>
+    <div class="chart-card" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Points</th>
+            <th>When</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/markjeromecruz/craftmania/pull/46" target="_blank" rel="noopener" class="ml">Pet park off the town route, sell produce at the store, 2 more mini-games, brighter lamps, kids/pets play on every activ</a></td>
+          <td>@markjeromecruz</td>
+          <td class="num">0</td>
+          <td class="muted">10h ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/malmoos/malmo/pull/282" target="_blank" rel="noopener" class="ml">catalog: add Cube (#270)</a></td>
+          <td>@bogdanpydev</td>
+          <td class="num">1</td>
+          <td class="muted">11h ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/RickMAllowIT/babomoba/issues/18" target="_blank" rel="noopener" class="ml">Slice 15: Core</a></td>
+          <td>@RickMAllowIT</td>
+          <td class="num">0</td>
+          <td class="muted">22h ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/RickMAllowIT/babomoba/issues/4" target="_blank" rel="noopener" class="ml">Slice 17: Enemy dummy (static)</a></td>
+          <td>@RickMAllowIT</td>
+          <td class="num">0</td>
+          <td class="muted">22h ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/RickMAllowIT/babomoba/issues/1" target="_blank" rel="noopener" class="ml">PRD: Project BaboMOBA — MVP Phase 1 Sandbox</a></td>
+          <td>@RickMAllowIT</td>
+          <td class="num">0</td>
+          <td class="muted">22h ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/IPA-CyberLab/IPA-RS-KakuriZai/pull/2" target="_blank" rel="noopener" class="ml">[codex] Harden Studio authentication</a></td>
+          <td>@mizuamedesu</td>
+          <td class="num">0</td>
+          <td class="muted">23h ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/bianzhilong2-ctrl/agents-radar/issues/275" target="_blank" rel="noopener" class="ml">🦞 OpenClaw Ecosystem Digest 2026-06-29</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">1d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Chestnuts-0/os-feed/issues/232" target="_blank" rel="noopener" class="ml">🦞 OpenClaw Ecosystem Digest 2026-06-29</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">1d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Chestnuts-0/os-feed/issues/230" target="_blank" rel="noopener" class="ml">🦞 OpenClaw 生态日报 2026-06-29</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">1d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#FF6600">Hacker News</span></td>
+          <td><a href="https://news.ycombinator.com/item?id=48705100" target="_blank" rel="noopener" class="ml">Enhancing x11 Application Security with LXC (2025)</a></td>
+          <td>@enriquto</td>
+          <td class="num">0</td>
+          <td class="muted">2d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/yxlyx/lawplain/pull/84" target="_blank" rel="noopener" class="ml">feat(ask): Durable-Object-hosted runs that survive navigation</a></td>
+          <td>@justrach</td>
+          <td class="num">0</td>
+          <td class="muted">2d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#FF6600">Hacker News</span></td>
+          <td><a href="https://news.ycombinator.com/item?id=48704643" target="_blank" rel="noopener" class="ml">Enhancing x11 Application Security with LXC (2025)</a></td>
+          <td>@BobbyTables2</td>
+          <td class="num">0</td>
+          <td class="muted">2d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/yxlyx/lawplain/issues/82" target="_blank" rel="noopener" class="ml">Ask Lawplain fails in production: sandboxed agent ends before producing an answer</a></td>
+          <td>@justrach</td>
+          <td class="num">0</td>
+          <td class="muted">2d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#4285F4">Google News</span></td>
+          <td><a href="https://news.google.com/rss/articles/CBMiggFBVV95cUxQQW1oN2hzZkxzMm53OEFIMFRsTmJjbHdudTdndlVJODRac1pCMXJ1aTY3N3k1WWN0Mm9RRUhTZW4wLXRTXzhwaVN0RnVDeVRoazZabUtsRDdkOVJFQ2xSTWRDRmxNZ29CMGNGTklNT2h2UFJpMTAxQnZqRTVDMkwxUmVn?oc=5" target="_blank" rel="noopener" class="ml">Lay of the Land Review: Why It Beats Minecraft in Physics? - VPEsports</a></td>
+          <td>@VPEsports</td>
+          <td class="num">0</td>
+          <td class="muted">3d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#FF6600">Hacker News</span></td>
+          <td><a href="https://news.ycombinator.com/item?id=48680473" target="_blank" rel="noopener" class="ml">This isn't a PPT. Repo speaks</a></td>
+          <td>@hblqzj</td>
+          <td class="num">2</td>
+          <td class="muted">4d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/greyw0rks/bountyscout/issues/70" target="_blank" rel="noopener" class="ml">🎯 Bounty Alert: 22 New Opportunities — 2026-06-25 09:22 UTC</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">5d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/wwthw/CubeSandbox/pull/1" target="_blank" rel="noopener" class="ml">CubeSandbox on Kubernetes, compute node image build and deploy.</a></td>
+          <td>@wwthw</td>
+          <td class="num">0</td>
+          <td class="muted">5d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Chestnuts-0/os-feed/issues/101" target="_blank" rel="noopener" class="ml">📈 AI Open Source Trends 2026-06-24</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">6d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Chestnuts-0/os-feed/issues/102" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-06-24</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">6d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Atena-IT/open-arena/pull/51" target="_blank" rel="noopener" class="ml">feat(api): E2B-compatible SandboxProvider (WS6, closes #40)</a></td>
+          <td>@DiTo97</td>
+          <td class="num">0</td>
+          <td class="muted">6d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Atena-IT/open-arena/issues/40" target="_blank" rel="noopener" class="ml">WS6 [M4]: SandboxProvider + E2B-compatible adapter</a></td>
+          <td>@DiTo97</td>
+          <td class="num">0</td>
+          <td class="muted">6d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Atena-IT/open-arena/issues/33" target="_blank" rel="noopener" class="ml">Epic: Adopt Open Arena as Reply ModelFactory eval/RL arena (M1–M5)</a></td>
+          <td>@DiTo97</td>
+          <td class="num">0</td>
+          <td class="muted">6d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/hippozjs/hermes-agent/pull/1" target="_blank" rel="noopener" class="ml">CI: cube-sandbox-backend (mirror for upstream #47614)</a></td>
+          <td>@hippozjs</td>
+          <td class="num">0</td>
+          <td class="muted">8d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/NousResearch/hermes-agent/issues/50687" target="_blank" rel="noopener" class="ml">Security: Host-side file tools lack access control — attack surface left open by sandbox architecture</a></td>
+          <td>@yubingz</td>
+          <td class="num">0</td>
+          <td class="muted">8d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/liyupi/github-claw/issues/107" target="_blank" rel="noopener" class="ml">📰 AI 科技日报 — 2026-06-17</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">12d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/tinylabscom/this-week-in-microvms/issues/42" target="_blank" rel="noopener" class="ml">[Link]: TencentCloud/CubeSandbox: Instant, Concurrent, Secure & Lightweight Sandbox for AI Agents.</a></td>
+          <td>@aneyzberg</td>
+          <td class="num">0</td>
+          <td class="muted">13d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/tinylabscom/this-week-in-microvms/issues/41" target="_blank" rel="noopener" class="ml">[Link]: TencentCloud/CubeSandbox: Instant, Concurrent, Secure & Lightweight Sandbox for AI Agents.</a></td>
+          <td>@aneyzberg</td>
+          <td class="num">0</td>
+          <td class="muted">13d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#4285F4">Google News</span></td>
+          <td><a href="https://news.google.com/rss/articles/CBMi4AFBVV95cUxNVER1anRrcmRhd0MtR3g0UkgyS045N1hmb2kwX25rQ3NVQmJleXU1V3BBWDZiazJrZ2hlaTJyMW1VOHp1OVhFc3pNdDhBV1BuWldFenk4Ml9LektmLThsTXBzaHZ0cERfWklhUDlPUl9SRTZMcnJLVFczTlpjckdTMjJhREE0TXA5ZXZSMUdqQ0ZZZ3VlTTRhVlpXcVR5c1lmQ19kN0llTVRvMXl2a2t2NlRhRnhJbmlOSU56UGozaGlMZW5xTmpTRE1xZXJmSVVYeHJtZVNFSFI5d2tyYXJMYtIB5gFBVV95cUxObXpVZ1ZkeTBHWE9UNWYyeDVmaGM0dFlzOVNNTmJxMkMzMFVyanNhOHJWVWtmWjhpa3VXSGNGcG5lWjJZdUpWclZqeVFrN1I2VXhlcGNtTlpYRnhzQzQtbVhRUTVXaDJpVWtrenZDMlRHOFdyWGFkN2xHUmtoaFZ2eUo1WG15MFJkUThtQ1R0ZVZtTE5taHZPY0oyUWw1YUtIUHRWaHpWSUFzblQzTk9vSVdBS1czdG1OYUVsU1BiMDRiMFpWVE9iVEJscXAyQy1sVWdQNmtFSjhfcUhpV0hyNlVBaWQtZw?oc=5" target="_blank" rel="noopener" class="ml">Minecraft Chaos Cubed update release timings for all regions - The Times of India</a></td>
+          <td>@The Times of India</td>
+          <td class="num">0</td>
+          <td class="muted">14d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#4285F4">Google News</span></td>
+          <td><a href="https://news.google.com/rss/articles/CBMixAJBVV95cUxQZ3lySHAxak9GZmIxTDVob3dZVnE2OXhqZlJhS3NvRWdLaTNLSWtaYm14QlBndV9YZEdiVi1yanNDZUlYandHSG1WTGcwcnVvaHY0c1hfY0tXdWlUNERPLVpnYVBIVW93TEE0V2oxUkZHTUdVOHdrZDJBWXBUbFBuMWJzLWFfbGxfRzJ1OGc2bW9wR25NMHlFM2JmXzFoaUxWY1JadUZjM1RyMHVzMkhPME5oRk9URkdRRk5WbVBiZExYLUtaeWd0R2doeUdmcW8yclpKbXFYTjF3NnZ5MzhNY2FGNWFNTGRUREhma0Z6Q2tBQTlfY3ZPME0wZlpsaWRkbUxuTmFfNFJiaENvcXpGbW9qZjUxNUNIdmROUU1WdUxVdTExZm1PLXJXeGRTeGw3U1pucFpQUE1YMkZBdGhFYVZJX0c?oc=5" target="_blank" rel="noopener" class="ml">Minecraft Chaos Cubed update release timings for all regions - MSN</a></td>
+          <td>@MSN</td>
+          <td class="num">0</td>
+          <td class="muted">14d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Wndall/VibeCodingProgram/issues/25" target="_blank" rel="noopener" class="ml">📰 AI 科技日报 — 2026-06-11</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">18d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/liyupi/github-claw/issues/101" target="_blank" rel="noopener" class="ml">📰 AI 科技日报 — 2026-06-11</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">18d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Wndall/VibeCodingProgram/issues/23" target="_blank" rel="noopener" class="ml">📰 AI 科技日报 — 2026-06-09</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">21d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/liyupi/github-claw/issues/99" target="_blank" rel="noopener" class="ml">📰 AI 科技日报 — 2026-06-09</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">21d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/pjcau/agent-orchestrator/pull/170" target="_blank" rel="noopener" class="ml">research-scout audit: improvements from TencentCloud/CubeSandbox</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted">25d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/superset-sh/superset/issues/5047" target="_blank" rel="noopener" class="ml">Explore CubeSandbox integration for running AI agents in isolated micro-VMs</a></td>
+          <td>@patelchaitany</td>
+          <td class="num">0</td>
+          <td class="muted">27d ago</td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/DragonOS-Community/DragonOS/issues/1946" target="_blank" rel="noopener" class="ml">ROADMAP: Support CubeSandbox as a DragonOS guest kernel target</a></td>
+          <td>@fslongjin</td>
+          <td class="num">0</td>
+          <td class="muted">29d ago</td>
+        </tr>
+        
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    Cube Radar · Powered by HN Algolia, GitHub API, Reddit JSON, Google News RSS<br>
+    <a href="https://github.com/TencentCloud/CubeSandbox">github.com/TencentCloud/CubeSandbox</a>
+  </div>
+</div>
+
+<script>
+  Chart.defaults.color = '#7D8590';
+  Chart.defaults.borderColor = '#1F2630';
+  Chart.defaults.font.family = "'Inter', -apple-system, system-ui, sans-serif";
+
+  // Volume trend
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: ["2026-05-31", "2026-06-01", "2026-06-02", "2026-06-03", "2026-06-04", "2026-06-05", "2026-06-06", "2026-06-07", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-13", "2026-06-14", "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19", "2026-06-20", "2026-06-21", "2026-06-22", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26", "2026-06-27", "2026-06-28", "2026-06-29", "2026-06-30"],
+      datasets: [{"label": "GitHub", "data": [1, 0, 1, 0, 1, 0, 0, 0, 0, 2, 0, 2, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 2, 3, 2, 2, 0, 1, 1, 9, 0], "borderColor": "#8B5CF6", "backgroundColor": "#8B5CF633", "tension": 0.35, "fill": true, "borderWidth": 2, "pointRadius": 3, "pointHoverRadius": 6}, {"label": "Google News", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0], "borderColor": "#4285F4", "backgroundColor": "#4285F433", "tension": 0.35, "fill": true, "borderWidth": 2, "pointRadius": 3, "pointHoverRadius": 6}, {"label": "Hacker News", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2, 0, 0], "borderColor": "#FF6600", "backgroundColor": "#FF660033", "tension": 0.35, "fill": true, "borderWidth": 2, "pointRadius": 3, "pointHoverRadius": 6}]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top', align: 'end',
+          labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle', padding: 16 }
+        },
+        tooltip: {
+          backgroundColor: '#11161D',
+          borderColor: '#1F2630', borderWidth: 1,
+          padding: 12, cornerRadius: 8, displayColors: true,
+          titleColor: '#E6EDF3', bodyColor: '#E6EDF3',
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+        y: { grid: { color: '#1F2630', drawBorder: false }, beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+
+  // Pie
+  new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ["GitHub", "Google News", "Hacker News"],
+      datasets: [{
+        data: [30, 3, 3],
+        backgroundColor: ["#8B5CF6", "#4285F4", "#FF6600"],
+        borderColor: '#11161D', borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle', padding: 12 }
+        },
+        tooltip: {
+          backgroundColor: '#11161D',
+          borderColor: '#1F2630', borderWidth: 1,
+          padding: 12, cornerRadius: 8
+        }
+      }
+    }
+  });
+</script>
+</body>
+</html>

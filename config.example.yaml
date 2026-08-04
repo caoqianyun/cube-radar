@@ -1,0 +1,52 @@
+# Cube Sandbox 全网监测配置（示例模板）
+# 复制为 config.yaml 后填入你自己的配置
+
+project:
+  name: "Cube Sandbox"
+  github_repo: "TencentCloud/CubeSandbox"
+  domain: "cubesandbox.ai"
+
+# 主要监测关键词（任意一个匹配即收录）
+keywords:
+  primary:
+    - "Cube Sandbox"
+    - "CubeSandbox"
+    - "TencentCloud/CubeSandbox"
+    - "cubesandbox.ai"
+  # 上下文关键词（行业话题中是否提及 cube）
+  context:
+    - "E2B alternative"
+    - "open source agent sandbox"
+    - "MicroVM AI agent"
+
+# 数据源开关
+sources:
+  hackernews: true       # HN Algolia API（免费）
+  github: true           # GitHub REST API（公开数据无需 token，rate limit 60/h）
+  reddit: true           # Reddit JSON API（无需登录，rate limit 宽松）
+  google_news: true      # Google News RSS（免费）
+  github_code: true      # GitHub Code Search（扫代码里的 Cube 集成指纹，需要 token 否则只有 10/min）
+
+# 代码集成扫描配置（github_code 采集器用）
+code_search:
+  # 要排除的仓库（我们自己 / Cube 自己的仓库），避免把自己当集成方抓进来
+  repo_blacklist: "TencentCloud/CubeSandbox"
+  # 自定义指纹（留空则用 github_code.py 里的 CODE_FINGERPRINTS 默认清单）
+  # 想加新指纹时在这里追加，会覆盖默认清单
+  fingerprints: []
+
+# GitHub token（可选，配上后 rate limit 升到 5000/h）
+# 申请方式：https://github.com/settings/tokens?type=beta
+# 建议：Fine-grained token + Public Repositories (read-only) + 90 天过期
+github_token: ""
+
+# 时间窗口选项（命令行 --window 用）
+windows:
+  - "24h"
+  - "3d"
+  - "7d"
+  - "30d"
+  - "180d"
+
+# 报告输出目录
+output_dir: "reports"

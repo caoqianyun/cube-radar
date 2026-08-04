@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cube Sandbox · Radar Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0A0E14;
+    --bg-card: #11161D;
+    --bg-card-hover: #161C24;
+    --border: #1F2630;
+    --text: #E6EDF3;
+    --text-muted: #7D8590;
+    --text-dim: #4B535D;
+    --brand: #3F7FC4;
+    --brand-light: #6BA7DC;
+    --accent: #27476F;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'PingFang SC', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(63,127,196,0.08), transparent 50%),
+      radial-gradient(circle at 80% 100%, rgba(39,71,111,0.06), transparent 50%);
+  }
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+
+  /* Language toggle */
+  .lang-toggle {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    z-index: 100;
+    display: inline-flex;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .lang-btn {
+    padding: 6px 14px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    border-radius: 999px;
+    transition: all 0.2s;
+  }
+  .lang-btn:hover { color: var(--text); }
+  .lang-btn.active {
+    background: var(--brand);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(63,127,196,0.4);
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .header h1 .brand { color: var(--brand-light); }
+  .header .sub {
+    color: var(--text-muted);
+    margin-top: 6px;
+    font-size: 13px;
+  }
+  .window-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--brand-light);
+  }
+  .window-badge::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: var(--brand-light);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--brand-light);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* KPI cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    transition: all 0.2s;
+  }
+  .kpi-card:hover {
+    border-color: var(--brand);
+    transform: translateY(-2px);
+  }
+  .kpi-label {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .kpi-value {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-hint {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 6px;
+  }
+
+  .section { margin-bottom: 32px; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .section-title .num {
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-left: 6px;
+  }
+
+  .chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .chart-wrap { position: relative; height: 320px; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 900px) {
+    .two-col { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  td.num { font-variant-numeric: tabular-nums; color: var(--text); }
+  td.muted { color: var(--text-dim); font-size: 12px; }
+  td a.ml { color: var(--text); text-decoration: none; }
+  td a.ml:hover { color: var(--brand-light); }
+  .empty { color: var(--text-dim); text-align: center; padding: 28px !important; font-style: italic; }
+
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  .bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .bar { height: 6px; border-radius: 3px; background: var(--brand); min-width: 4px; }
+  .bar-pct { color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; min-width: 36px; }
+
+  .top-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .top-card {
+    display: flex;
+    gap: 16px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s;
+  }
+  .top-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--brand);
+    transform: translateX(4px);
+  }
+  .top-rank {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    min-width: 32px;
+    padding-top: 2px;
+  }
+  .top-body { flex: 1; min-width: 0; }
+  .top-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+  .top-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin: 4px 0 6px;
+  }
+  .top-stats {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .top-stats .score {
+    margin-left: auto;
+    color: var(--brand-light);
+    font-weight: 500;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: color-mix(in srgb, var(--c) 18%, transparent);
+    color: var(--c);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .muted { color: var(--text-muted); }
+
+  .footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+  }
+  .footer a { color: var(--brand-light); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- Language Toggle -->
+<div class="lang-toggle" role="tablist">
+  <button class="lang-btn active" data-lang="en" role="tab">EN</button>
+  <button class="lang-btn" data-lang="zh" role="tab">中文</button>
+</div>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>
+        <span class="brand">●</span> Cube Sandbox
+        <span style="color:var(--text-muted);font-weight:400" data-i18n="header_suffix">· Radar Report</span>
+      </h1>
+      <div class="sub">
+        <span data-i18n="period_label">Period</span>: 2026-07-01 08:54 UTC → 2026-07-08 08:54 UTC ·
+        <span data-i18n="generated_label">Generated</span> 2026-07-08 16:54
+      </div>
+    </div>
+    <div class="window-badge">
+      <span data-i18n="window_label">Window</span>: 7d
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="kpi_total">Total Mentions</div>
+      <div class="kpi-value">23</div>
+      <div class="kpi-hint" data-i18n="kpi_total_hint">Across HN / GitHub / Reddit / Google News</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="kpi_authors">Unique Authors</div>
+      <div class="kpi-value">7</div>
+      <div class="kpi-hint" data-i18n="kpi_authors_hint">Distinct accounts mentioning the project</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="kpi_engagement">Total Engagement</div>
+      <div class="kpi-value">15</div>
+      <div class="kpi-hint" data-i18n="kpi_engagement_hint">Upvotes + comments combined</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="kpi_peak">Peak Day</div>
+      <div class="kpi-value" style="font-size:20px">2026-07-08</div>
+      <div class="kpi-hint">
+        20 <span data-i18n="kpi_peak_hint">mentions on this day</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trend chart -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <span data-i18n="sec_trend">Volume Trend</span>
+        <span class="num" data-i18n="sec_trend_hint">· daily mentions by source</span>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" data-i18n="sec_source">Source Breakdown</div>
+      </div>
+      <div class="chart-card" style="padding:0">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="th_source">Source</th>
+              <th data-i18n="th_mentions">Mentions</th>
+              <th data-i18n="th_points">Points</th>
+              <th data-i18n="th_comments">Comments</th>
+              <th data-i18n="th_share">Share</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+        <tr>
+          <td><span class="dot" style="background:#8B5CF6"></span>GitHub</td>
+          <td class="num">22</td>
+          <td class="num">0</td>
+          <td class="num">13</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar" style="width:95.7%;background:#8B5CF6"></div>
+              <span class="bar-pct">95.7%</span>
+            </div>
+          </td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="dot" style="background:#FF6600"></span>Hacker News</td>
+          <td class="num">1</td>
+          <td class="num">2</td>
+          <td class="num">0</td>
+          <td>
+            <div class="bar-wrap">
+              <div class="bar" style="width:4.3%;background:#FF6600"></div>
+              <span class="bar-pct">4.3%</span>
+            </div>
+          </td>
+        </tr>
+        
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title" data-i18n="sec_dist">Distribution</div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-wrap" style="height:260px"><canvas id="pieChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <span data-i18n="sec_top">Top Mentions</span>
+        <span class="num" data-i18n="sec_top_hint">· ranked by engagement</span>
+      </div>
+    </div>
+    <div class="top-grid">
+      
+        <a class="top-card" href="https://github.com/uibm/trending-watcher/issues/3769" target="_blank" rel="noopener">
+          <div class="top-rank">#1</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="4h ago" data-zh="4 小时前">4h ago</span></span>
+            </div>
+            <div class="top-title">Check trending repo: TencentCloud/CubeSandbox</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 2</span>
+              <span class="score" data-en="score 4" data-zh="热度 4">score 4</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/ParaTensor/XEnsemble/pull/31" target="_blank" rel="noopener">
+          <div class="top-rank">#2</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@devin-ai-integration[bot]</span>
+              <span class="muted">· <span data-en="1h ago" data-zh="1 小时前">1h ago</span></span>
+            </div>
+            <div class="top-title">docs(runtime): multi-sandbox = multi-Provider; keep abstraction in XEnsemble, not blink</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/bcc2802/agents-radar/issues/222" target="_blank" rel="noopener">
+          <div class="top-rank">#3</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="1h ago" data-zh="1 小时前">1h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI 开源趋势日报 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/junlinzhao327-oss/big_model_radar/issues/4" target="_blank" rel="noopener">
+          <div class="top-rank">#4</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="3h ago" data-zh="3 小时前">3h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI 开源趋势日报 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/zuiqiangxianyu/ai-agent-trending/issues/10" target="_blank" rel="noopener">
+          <div class="top-rank">#5</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="4h ago" data-zh="4 小时前">4h ago</span></span>
+            </div>
+            <div class="top-title">🤖 AI Agent 每日精选 — 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/Archerpiggy/trending-top10/issues/14" target="_blank" rel="noopener">
+          <div class="top-rank">#6</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="4h ago" data-zh="4 小时前">4h ago</span></span>
+            </div>
+            <div class="top-title">GitHub Trending Top 10 - 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/96loveslife/big_model_radar/issues/128" target="_blank" rel="noopener">
+          <div class="top-rank">#7</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="5h ago" data-zh="5 小时前">5h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI 开源趋势日报 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/Lux0206/agents-radar/issues/102" target="_blank" rel="noopener">
+          <div class="top-rank">#8</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="5h ago" data-zh="5 小时前">5h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI 开源趋势日报 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/JohnGao818/agents-radar/issues/498" target="_blank" rel="noopener">
+          <div class="top-rank">#9</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="6h ago" data-zh="6 小时前">6h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI Open Source Trends 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/JohnGao818/agents-radar/issues/497" target="_blank" rel="noopener">
+          <div class="top-rank">#10</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="6h ago" data-zh="6 小时前">6h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI 开源趋势日报 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/Augustrains/agents-radar/issues/473" target="_blank" rel="noopener">
+          <div class="top-rank">#11</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="7h ago" data-zh="7 小时前">7h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI 开源趋势日报 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/onysakura/news-daily/issues/7483" target="_blank" rel="noopener">
+          <div class="top-rank">#12</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="7h ago" data-zh="7 小时前">7h ago</span></span>
+            </div>
+            <div class="top-title">2026-07-08 Github Trending</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 1</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/tencentcloud/CubeSandbox" target="_blank" rel="noopener">
+          <div class="top-rank">#13</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#FF6600">Hacker News</span>
+              <span class="muted">@handfuloflight</span>
+              <span class="muted">· <span data-en="1d ago" data-zh="1 天前">1d ago</span></span>
+            </div>
+            <div class="top-title">CubeSandbox</div>
+            <div class="top-stats">
+              <span>↑ 2</span>
+              <span>💬 0</span>
+              <span class="score" data-en="score 2" data-zh="热度 2">score 2</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/rollysys/agents-radar/issues/790" target="_blank" rel="noopener">
+          <div class="top-rank">#14</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="5h ago" data-zh="5 小时前">5h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI 开源趋势日报 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 0</span>
+              <span class="score" data-en="score 0" data-zh="热度 0">score 0</span>
+            </div>
+          </div>
+        </a>
+        
+
+        <a class="top-card" href="https://github.com/xiehd77-del/agents-radar/issues/44" target="_blank" rel="noopener">
+          <div class="top-rank">#15</div>
+          <div class="top-body">
+            <div class="top-meta">
+              <span class="chip" style="--c:#8B5CF6">GitHub</span>
+              <span class="muted">@github-actions[bot]</span>
+              <span class="muted">· <span data-en="5h ago" data-zh="5 小时前">5h ago</span></span>
+            </div>
+            <div class="top-title">📈 AI 开源趋势日报 2026-07-08</div>
+            <div class="top-stats">
+              <span>↑ 0</span>
+              <span>💬 0</span>
+              <span class="score" data-en="score 0" data-zh="热度 0">score 0</span>
+            </div>
+          </div>
+        </a>
+        
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <span data-i18n="sec_all">All Mentions</span>
+        <span class="num" data-i18n="sec_all_hint">· latest 50</span>
+      </div>
+    </div>
+    <div class="chart-card" style="padding:0">
+      <table>
+        <thead>
+          <tr>
+            <th data-i18n="th_source">Source</th>
+            <th data-i18n="th_title">Title</th>
+            <th data-i18n="th_author">Author</th>
+            <th data-i18n="th_points">Points</th>
+            <th data-i18n="th_when">When</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/ParaTensor/XEnsemble/pull/31" target="_blank" rel="noopener" class="ml">docs(runtime): multi-sandbox = multi-Provider; keep abstraction in XEnsemble, not blink</a></td>
+          <td>@devin-ai-integration[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="1h ago" data-zh="1 小时前">1h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/bcc2802/agents-radar/issues/222" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="1h ago" data-zh="1 小时前">1h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/junlinzhao327-oss/big_model_radar/issues/4" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="3h ago" data-zh="3 小时前">3h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/uibm/trending-watcher/issues/3769" target="_blank" rel="noopener" class="ml">Check trending repo: TencentCloud/CubeSandbox</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="4h ago" data-zh="4 小时前">4h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/zuiqiangxianyu/ai-agent-trending/issues/10" target="_blank" rel="noopener" class="ml">🤖 AI Agent 每日精选 — 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="4h ago" data-zh="4 小时前">4h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Archerpiggy/trending-top10/issues/14" target="_blank" rel="noopener" class="ml">GitHub Trending Top 10 - 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="4h ago" data-zh="4 小时前">4h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/96loveslife/big_model_radar/issues/128" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="5h ago" data-zh="5 小时前">5h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Lux0206/agents-radar/issues/102" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="5h ago" data-zh="5 小时前">5h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/rollysys/agents-radar/issues/790" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="5h ago" data-zh="5 小时前">5h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/xiehd77-del/agents-radar/issues/44" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="5h ago" data-zh="5 小时前">5h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/JohnGao818/agents-radar/issues/498" target="_blank" rel="noopener" class="ml">📈 AI Open Source Trends 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="6h ago" data-zh="6 小时前">6h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/JohnGao818/agents-radar/issues/497" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="6h ago" data-zh="6 小时前">6h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Chestnuts-0/os-feed/issues/354" target="_blank" rel="noopener" class="ml">📈 AI Open Source Trends 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="6h ago" data-zh="6 小时前">6h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Chestnuts-0/os-feed/issues/353" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="6h ago" data-zh="6 小时前">6h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/leevaluder-maker/agents-radar/issues/100" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="6h ago" data-zh="6 小时前">6h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/THTHDGCS/agents-radar/issues/34" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="7h ago" data-zh="7 小时前">7h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/Augustrains/agents-radar/issues/473" target="_blank" rel="noopener" class="ml">📈 AI 开源趋势日报 2026-07-08</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="7h ago" data-zh="7 小时前">7h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/onysakura/news-daily/issues/7483" target="_blank" rel="noopener" class="ml">2026-07-08 Github Trending</a></td>
+          <td>@github-actions[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="7h ago" data-zh="7 小时前">7h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/skipmaple/github-daily/issues/1275" target="_blank" rel="noopener" class="ml">GitHub Daily Top 10 @2026-07-08</a></td>
+          <td>@dailytop10[bot]</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="8h ago" data-zh="8 小时前">8h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/web1992/github-trending/issues/621" target="_blank" rel="noopener" class="ml">Github trending [TencentCloud/CubeSandbox] 毫秒级启动的AI沙箱</a></td>
+          <td>@web1992</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="8h ago" data-zh="8 小时前">8h ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#FF6600">Hacker News</span></td>
+          <td><a href="https://github.com/tencentcloud/CubeSandbox" target="_blank" rel="noopener" class="ml">CubeSandbox</a></td>
+          <td>@handfuloflight</td>
+          <td class="num">2</td>
+          <td class="muted"><span data-en="1d ago" data-zh="1 天前">1d ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/samuellawrentz/profile/pull/99" target="_blank" rel="noopener" class="ml">blog: microVMs vs containers for untrusted code (a sandbox that boots in 60ms)</a></td>
+          <td>@samuellawrentz</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="1d ago" data-zh="1 天前">1d ago</span></td>
+        </tr>
+        
+
+        <tr>
+          <td><span class="chip" style="--c:#8B5CF6">GitHub</span></td>
+          <td><a href="https://github.com/LRM-Teams/multica/pull/203" target="_blank" rel="noopener" class="ml">Feat/sandboxd config nodes</a></td>
+          <td>@exp-repair</td>
+          <td class="num">0</td>
+          <td class="muted"><span data-en="5d ago" data-zh="5 天前">5d ago</span></td>
+        </tr>
+        
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span data-i18n="footer_powered">Cube Radar · Powered by HN Algolia, GitHub API, Reddit JSON, Google News RSS</span><br>
+    <a href="https://github.com/TencentCloud/CubeSandbox">github.com/TencentCloud/CubeSandbox</a>
+  </div>
+</div>
+
+<script>
+  // ============ i18n dictionary ============
+  const I18N = {
+    en: {
+      header_suffix: "· Radar Report",
+      period_label: "Period",
+      generated_label: "Generated",
+      window_label: "Window",
+      kpi_total: "Total Mentions",
+      kpi_total_hint: "Across HN / GitHub / Reddit / Google News",
+      kpi_authors: "Unique Authors",
+      kpi_authors_hint: "Distinct accounts mentioning the project",
+      kpi_engagement: "Total Engagement",
+      kpi_engagement_hint: "Upvotes + comments combined",
+      kpi_peak: "Peak Day",
+      kpi_peak_hint: "mentions on this day",
+      sec_trend: "Volume Trend",
+      sec_trend_hint: "· daily mentions by source",
+      sec_source: "Source Breakdown",
+      sec_dist: "Distribution",
+      sec_top: "Top Mentions",
+      sec_top_hint: "· ranked by engagement",
+      sec_all: "All Mentions",
+      sec_all_hint: "· latest 50",
+      th_source: "Source",
+      th_mentions: "Mentions",
+      th_points: "Points",
+      th_comments: "Comments",
+      th_share: "Share",
+      th_title: "Title",
+      th_author: "Author",
+      th_when: "When",
+      empty_none: "No data",
+      empty_top: "No mentions yet in this window.",
+      empty_all: "No mentions yet.",
+      footer_powered: "Cube Radar · Powered by HN Algolia, GitHub API, Reddit JSON, Google News RSS",
+    },
+    zh: {
+      header_suffix: "· 传播监测报告",
+      period_label: "监测周期",
+      generated_label: "生成时间",
+      window_label: "窗口",
+      kpi_total: "总提及数",
+      kpi_total_hint: "覆盖 HN / GitHub / Reddit / Google News",
+      kpi_authors: "独立作者数",
+      kpi_authors_hint: "提及项目的不同账号数量",
+      kpi_engagement: "总互动量",
+      kpi_engagement_hint: "点赞 + 评论合计",
+      kpi_peak: "峰值日",
+      kpi_peak_hint: "条提及",
+      sec_trend: "声量趋势",
+      sec_trend_hint: "· 按来源分层的每日提及数",
+      sec_source: "来源分布",
+      sec_dist: "占比",
+      sec_top: "热门提及",
+      sec_top_hint: "· 按互动量排序",
+      sec_all: "全部提及",
+      sec_all_hint: "· 最近 50 条",
+      th_source: "来源",
+      th_mentions: "提及数",
+      th_points: "点赞",
+      th_comments: "评论",
+      th_share: "占比",
+      th_title: "标题",
+      th_author: "作者",
+      th_when: "时间",
+      empty_none: "暂无数据",
+      empty_top: "该时间窗口内暂无提及",
+      empty_all: "暂无提及记录",
+      footer_powered: "Cube Radar · 数据来源：HN Algolia、GitHub API、Reddit JSON、Google News RSS",
+    }
+  };
+
+  function applyLang(lang) {
+    document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
+    // 常规 i18n 属性
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      const val = I18N[lang]?.[key];
+      if (val !== undefined) el.textContent = val;
+    });
+    // 双语数据 (data-en / data-zh) — 用于时间戳、score 等含数字的动态字段
+    document.querySelectorAll('[data-en][data-zh]').forEach(el => {
+      el.textContent = el.getAttribute(lang === 'zh' ? 'data-zh' : 'data-en');
+    });
+    // 按钮激活态
+    document.querySelectorAll('.lang-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.lang === lang);
+    });
+    // 记住偏好
+    try { localStorage.setItem('cube-radar-lang', lang); } catch(e) {}
+  }
+
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyLang(btn.dataset.lang));
+  });
+
+  // 页面加载时恢复偏好（默认英文）
+  try {
+    const saved = localStorage.getItem('cube-radar-lang');
+    if (saved === 'zh') applyLang('zh');
+  } catch(e) {}
+
+  // ============ Charts ============
+  Chart.defaults.color = '#7D8590';
+  Chart.defaults.borderColor = '#1F2630';
+  Chart.defaults.font.family = "'Inter', -apple-system, system-ui, 'PingFang SC', sans-serif";
+
+  new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: ["2026-07-01", "2026-07-02", "2026-07-03", "2026-07-04", "2026-07-05", "2026-07-06", "2026-07-07", "2026-07-08"],
+      datasets: [{"label": "GitHub", "data": [0, 0, 1, 0, 0, 1, 0, 20], "borderColor": "#8B5CF6", "backgroundColor": "#8B5CF633", "tension": 0.35, "fill": true, "borderWidth": 2, "pointRadius": 3, "pointHoverRadius": 6}, {"label": "Hacker News", "data": [0, 0, 0, 0, 0, 1, 0, 0], "borderColor": "#FF6600", "backgroundColor": "#FF660033", "tension": 0.35, "fill": true, "borderWidth": 2, "pointRadius": 3, "pointHoverRadius": 6}]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top', align: 'end',
+          labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle', padding: 16 }
+        },
+        tooltip: {
+          backgroundColor: '#11161D',
+          borderColor: '#1F2630', borderWidth: 1,
+          padding: 12, cornerRadius: 8, displayColors: true,
+          titleColor: '#E6EDF3', bodyColor: '#E6EDF3',
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+        y: { grid: { color: '#1F2630', drawBorder: false }, beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+
+  new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ["GitHub", "Hacker News"],
+      datasets: [{
+        data: [22, 1],
+        backgroundColor: ["#8B5CF6", "#FF6600"],
+        borderColor: '#11161D', borderWidth: 2,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, pointStyle: 'circle', padding: 12 }
+        },
+        tooltip: {
+          backgroundColor: '#11161D',
+          borderColor: '#1F2630', borderWidth: 1,
+          padding: 12, cornerRadius: 8
+        }
+      }
+    }
+  });
+</script>
+</body>
+</html>
