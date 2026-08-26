@@ -439,6 +439,40 @@ TEMPLATE = r"""<!DOCTYPE html>
   }}
   @keyframes pulse {{ 0%,100% {{ opacity: 1; }} 50% {{ opacity: 0.4; }} }}
 
+  /* Window switcher */
+  .window-switcher {{
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px;
+  }}
+  .window-tab {{
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-decoration: none;
+    border-radius: 999px;
+    transition: all 0.2s;
+    letter-spacing: 0.02em;
+  }}
+  .window-tab:hover {{ color: var(--text); }}
+  .window-tab.active {{
+    background: var(--brand);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(63,127,196,0.4);
+  }}
+  .window-badge-inline {{
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--text-dim);
+    border-left: 1px solid var(--border);
+    margin-left: 4px;
+  }}
+
   /* KPI cards */
   .kpi-grid {{
     display: grid;
@@ -680,8 +714,13 @@ TEMPLATE = r"""<!DOCTYPE html>
         <span data-i18n="generated_label">Generated</span> {generated_at}
       </div>
     </div>
-    <div class="window-badge">
-      <span data-i18n="window_label">Window</span>: {window}
+    <div class="window-switcher">
+      <a class="window-tab" href="report-7d.html" data-window="7d">7d</a>
+      <a class="window-tab" href="report-30d.html" data-window="30d">30d</a>
+      <a class="window-tab" href="report-180d.html" data-window="180d">180d</a>
+      <span class="window-badge-inline">
+        <span data-i18n="window_label">Window</span>: {window}
+      </span>
     </div>
   </div>
 
@@ -984,6 +1023,16 @@ TEMPLATE = r"""<!DOCTYPE html>
     const saved = localStorage.getItem('cube-radar-lang');
     if (saved === 'zh') applyLang('zh');
   }} catch(e) {{}}
+
+  // ============ Highlight current window tab ============
+  (function() {{
+    const currentWindow = "{window}";
+    document.querySelectorAll('.window-tab').forEach(tab => {{
+      if (tab.dataset.window === currentWindow) {{
+        tab.classList.add('active');
+      }}
+    }});
+  }})();
 
   // ============ Charts ============
   Chart.defaults.color = '#7D8590';

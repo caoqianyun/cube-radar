@@ -176,7 +176,13 @@ def cmd_report(args, cfg):
         pr_issue_mentions=pr_issue_mentions,
     )
 
-    print(f"\n📄 报告已生成: {out_path.resolve()}\n")
+    print(f"\n📄 报告已生成: {out_path.resolve()}")
+
+    # 同时复制为固定文件名（report-7d.html），方便窗口切换器链接
+    import shutil
+    stable_path = out_dir / f"report-{args.window}.html"
+    shutil.copy2(out_path, stable_path)
+    print(f"   固定副本: {stable_path.resolve()}\n")
 
 
 def _build_code_integrations(mentions):
@@ -290,9 +296,13 @@ def _build_pr_issue_mentions(mentions):
 
 
 def cmd_all(args, cfg):
-    """采集 + 生成报告"""
+    """采集 + 生成报告（默认生成 7d/30d/180d 三个窗口）"""
     cmd_scan(args, cfg)
-    cmd_report(args, cfg)
+    # 生成三个窗口的报告
+    for w in ["7d", "30d", "180d"]:
+        print(f"\n📄 生成 [{w}] 报告...")
+        report_args = argparse.Namespace(window=w)
+        cmd_report(report_args, cfg)
 
 
 def main():
